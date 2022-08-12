@@ -1,7 +1,6 @@
-const express = require('express');
 const mysql = require('mysql2');
 const inquirer = require('inquirer');
-const db = mysql.createConnection(
+const db = mysql.createPool(
     {
         host: 'localhost',
         // Your MySQL username,
@@ -12,14 +11,9 @@ const db = mysql.createConnection(
     },
 );
 
-const PORT = process.env.PORT || 3001;
-const app = express();
+const promiseDB = db.promise();
 
-// express middleware
-app.use(express.urlencoded({ extended: false }));
-app.use(express.json());
-
-async function businessInfo() {
+function businessInfo() {
     return inquirer.prompt([
         // Select method
         {
@@ -58,7 +52,7 @@ async function businessInfo() {
         });
 }
 // view departments {show table}
-async function viewDepartment() {
+function viewDepartment() {
     const sql = 'select * from department';
     db.query(sql, (err,rows) => {
         if(err){
@@ -70,7 +64,7 @@ async function viewDepartment() {
     })
 }
 // view roles {show table}
-async function viewRoles() {
+function viewRoles() {
     const sql = 'select * from role';
     db.query(sql, (err,rows) => {
         if(err){
@@ -82,7 +76,7 @@ async function viewRoles() {
     })
 }
 // view employees {show table}
-async function viewEmployees() {
+function viewEmployees() {
     const sql = 'select * from employee';
     db.query(sql, (err,rows) => {
         if(err){
@@ -94,7 +88,7 @@ async function viewEmployees() {
     })
 }
 // add dept {INSERT INTO departments}
-async function addDepartment() {
+function addDepartment() {
     return inquirer.prompt([
         {
             type: 'input',
@@ -125,7 +119,11 @@ async function addDepartment() {
 }
 // add a role {INSERT INTO role}
 async function addRole() {
-    return inquirer.prompt([
+    const deptSQL = `SELECT name FROM department`;
+    const [deptArr, fields] = await promiseDB.query({sql: deptSQL, rowsAsArray:true});
+    console.log(deptArr);
+
+    /*return inquirer.prompt([
         {
             type: 'input',
             name: 'role',
@@ -152,10 +150,10 @@ async function addRole() {
             console.log(`Added ${params[0]} to the database!`);
             return businessInfo();
         })
-    })
+    })*/
 }
 // add an employee {INSERT INTO employee}
-async function addEmployee() {
+function addEmployee() {
     return inquirer.prompt([
         {
             type: 'input',
@@ -186,4 +184,17 @@ async function addEmployee() {
 }
 // update employee role {INSERT INTO departments}
 
-businessInfo();
+
+// Turn array of arrays into an array
+function simplifyArray(arr){
+    let result = [];
+    for (const dept of arr){
+        result = result.concat(dept);
+    }
+    return result;
+}
+
+
+
+//businessInfo();
+addRole();
