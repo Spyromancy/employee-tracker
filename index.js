@@ -13,7 +13,7 @@ const db = mysql.createPool(
 
 const promiseDB = db.promise();
 
-function businessInfo() {
+async function businessInfo() {
     return inquirer.prompt([
         // Select method
         {
@@ -52,43 +52,28 @@ function businessInfo() {
         });
 }
 // view departments {show table}
-function viewDepartment() {
+async function viewDepartment() {
     const sql = 'select * from department';
-    db.query(sql, (err,rows) => {
-        if(err){
-            console.log(err.message);
-            return;
-        }
-        console.table(rows);
-        return businessInfo();
-    })
+    const [rows, fields] = await promiseDB.query(sql)
+    console.table(rows);
+    return businessInfo();
 }
 // view roles {show table}
-function viewRoles() {
+async function viewRoles() {
     const sql = 'select * from role';
-    db.query(sql, (err,rows) => {
-        if(err){
-            console.log(err.message);
-            return;
-        }
-        console.table(rows);
-        return businessInfo();
-    })
+    const [rows, fields] = await promiseDB.query(sql)
+    console.table(rows);
+    return businessInfo();
 }
 // view employees {show table}
-function viewEmployees() {
+async function viewEmployees() {
     const sql = 'select * from employee';
-    db.query(sql, (err,rows) => {
-        if(err){
-            console.log(err.message);
-            return;
-        }
-        console.table(rows);
-        return businessInfo();
-    })
+    const [rows, fields] = await promiseDB.query(sql)
+    console.table(rows);
+    return businessInfo();
 }
 // add dept {INSERT INTO departments}
-function addDepartment() {
+async function addDepartment() {
     return inquirer.prompt([
         {
             type: 'input',
@@ -104,56 +89,69 @@ function addDepartment() {
             }
         }
     ])
-    .then( deptInfo => {
+    .then(async deptInfo => {
         const sql = `INSERT INTO department (name) values (?)`;
         const params = [deptInfo.dept];
-        db.query(sql, params, (err, result) => {
-            if(err){
-                console.log(err.message);
-                return;
-            }
-            console.log(`Added ${params[0]} to the database!`);
-            return businessInfo();
-        })
+        await promiseDB.query(sql, params);
+        console.log(`Added ${params[0]} to the database!`);
+        return businessInfo();
     })
 }
 // add a role {INSERT INTO role}
 async function addRole() {
     const deptSQL = `SELECT name FROM department`;
-    const [deptArr, fields] = await promiseDB.query({sql: deptSQL, rowsAsArray:true});
-    console.log(deptArr);
-
-    /*return inquirer.prompt([
+    const [rows, fields] = await promiseDB.query({sql: deptSQL, rowsAsArray:true});
+    const deptArr = simplifyArray(rows);
+    return inquirer.prompt([
         {
             type: 'input',
-            name: 'role',
-            message: 'Enter the name of the role.',
+            name: 'title',
+            message: 'Enter the title of the role.',
             validate: textInput => {
                 if (textInput){
                     return true;
                 } else {
-                    console.log("Please enter a name for the role!");
+                    console.log("Please enter a title for the role!");
                     return false;
                 }
             }
         },
+        {
+            type: 'number',
+            name: 'salary',
+            message: 'What is the salary for this role?',
+            validate: input => {
+                if (input){
+                    return true;
+                } else {
+                    console.log("  Please enter number!");
+                    return false;
+                }
+            }
+        },
+        {
+            type:'list',
+            name:'department',
+            message: 'What department does the role belong to?',
+            choices: deptArr,
+            // convert the dept name to it's matching id, since it already appears in the order it is in
+            // in the database we don't need to do a seperate call to it.
+            filter: input => {
+                return (deptArr.indexOf(input)+1);
+            }
+        },
         
     ])
-    .then( roleInfo => {
-        const sql = `INSERT INTO role (name) values (?)`;
-        const params = [roleInfo.role];
-        db.query(sql, params, (err, result) => {
-            if(err){
-                console.log(err.message);
-                return;
-            }
-            console.log(`Added ${params[0]} to the database!`);
-            return businessInfo();
-        })
-    })*/
+    .then( async roleInfo => {
+        const sql = `INSERT INTO role (title, salary, department_id) values (?,?,?)`;
+        const params = [roleInfo.title, roleInfo.salary, roleInfo.department];
+        await promiseDB.query(sql, params);
+        console.log(`Added ${params[0]} to the database!`);
+        return businessInfo();
+    });
 }
 // add an employee {INSERT INTO employee}
-function addEmployee() {
+async function addEmployee() {
     return inquirer.prompt([
         {
             type: 'input',
@@ -196,5 +194,4 @@ function simplifyArray(arr){
 
 
 
-//businessInfo();
-addRole();
+businessInfo();

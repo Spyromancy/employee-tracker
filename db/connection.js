@@ -1,7 +1,7 @@
 const mysql = require('mysql2/promise');
 const bluebird = require('bluebird')
 
-const db = await mysql.createConnection(
+const db = mysql.createConnection(
     {
         host: 'localhost',
         // Your MySQL username,
