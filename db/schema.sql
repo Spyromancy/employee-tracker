@@ -1,8 +1,10 @@
 use employee_db;
 
-drop table if exists department;
-drop table if exists role;
 drop table if exists employee;
+drop table if exists role;
+drop table if exists department;
+
+
 
 create table department (
     id integer auto_increment primary key not null,
