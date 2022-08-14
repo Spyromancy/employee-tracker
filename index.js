@@ -1,6 +1,6 @@
 const mysql = require('mysql2');
 const inquirer = require('inquirer');
-const table = require('console.table')
+require('console.table');
 const db = mysql.createPool(
     {
         host: 'localhost',
@@ -21,7 +21,7 @@ async function businessInfo() {
             type:'list',
             name:'function',
             message: 'What would you like to do?',
-            choices: ['View All Employees', 'Add Employee', 'Update Employee Role', 'View All Roles', 'Add Role', 'View All Department', 'Add Department', 'Quit']
+            choices: ['View All Employees', 'Add Employee', 'Update Employee Role', 'Update Employee Manager', 'View All Roles', 'Add Role', 'View All Department', 'Add Department', 'Quit']
         },
     ])
         .then(choice => {
@@ -35,6 +35,9 @@ async function businessInfo() {
                 case 'Update Employee Role':
                     updateEmployee();
                     break;
+                    case 'Update Employee Manager':
+                        updateManager();
+                        break;
                 case 'View All Roles':
                     viewRoles();
                     break;
@@ -48,7 +51,7 @@ async function businessInfo() {
                     addDepartment();
                     break;
                 case 'Quit':
-                    return;
+                    return 0;
             }
         });
 }
@@ -64,7 +67,7 @@ async function viewRoles() {
     const sql = `select role.id, role.title, role.salary,
     department.name as department
     from role
-    join department on role.department_id = department.id
+    left join department on role.department_id = department.id
     order by role.id`;
     const [rows, fields] = await promiseDB.query(sql)
     console.table(rows);
@@ -72,17 +75,57 @@ async function viewRoles() {
 }
 // view employees {show table}
 async function viewEmployees() {
-    const sql = `select e.id, e.first_name, e.last_name,
-    role.title, role.salary, 
-    department.name as department, CONCAT(m.first_name, " ", m.last_name) AS manager
-    from employee e
-    join role on e.role_id = role.id
-    join department on role.department_id = department.id
-    left join employee m on e.manager_id = m.id
-    order by e.id`;
-    const [rows, fields] = await promiseDB.query(sql)
-    console.table(rows);
-    return businessInfo();
+    return inquirer.prompt([
+        {
+            type:'list',
+            name: 'view',
+            message: 'How would you like to sort the employees?',
+            choices: ['id', 'manager', 'department']
+        }
+    ])
+    .then(async answer => {
+        switch(answer.view){
+            case 'id':
+                const idSQL = `select e.id, e.first_name, e.last_name,
+                role.title, role.salary, 
+                department.name as department, CONCAT(m.first_name, " ", m.last_name) AS manager
+                from employee e
+                left join role on e.role_id = role.id
+                left join department on role.department_id = department.id
+                left join employee m on e.manager_id = m.id
+                order by e.id`;
+                const [idRows, fields1] = await promiseDB.query(idSQL)
+                console.table(idRows);
+                return businessInfo();
+            case 'manager':
+                const mgrSQL = `select CONCAT(m.first_name, " ", m.last_name) AS manager,
+                e.id, e.first_name, e.last_name,
+                role.title, role.salary, 
+                department.name as department
+                from employee e
+                left join role on e.role_id = role.id
+                left join department on role.department_id = department.id
+                left join employee m on e.manager_id = m.id
+                order by e.manager_id`;
+                const [mgrRows, fields2] = await promiseDB.query(mgrSQL)
+                console.table(mgrRows);
+                return businessInfo();
+            case 'department':
+                const deptSQL = `select department.name as department,
+                e.id, e.first_name, e.last_name,
+                role.title, role.salary, 
+                CONCAT(m.first_name, " ", m.last_name) AS manager
+                from employee e
+                left join role on e.role_id = role.id
+                left join department on role.department_id = department.id
+                left join employee m on e.manager_id = m.id
+                order by department.id`;
+                const [deptRows, fields3] = await promiseDB.query(deptSQL)
+                console.table(deptRows);
+                return businessInfo();
+        }
+    })
+    
 }
 // add dept {INSERT INTO departments}
 async function addDepartment() {
@@ -230,9 +273,91 @@ async function addEmployee() {
 }
 // update employee role {INSERT INTO departments}
 async function updateEmployee() {
-    const nameSQL = `select `
-    const roleSQL = ``
-    const updateSQL = `` 
+    const nameSQL = `select CONCAT(first_name, " ", last_name) as name from employee`
+    const [nrows, nfields] = await promiseDB.query({sql:nameSQL, rowsAsArray:true});
+    const nameArr = simplifyArray(nrows);
+
+    const roleSQL = `SELECT title FROM role`;
+    const [rows, fields] = await promiseDB.query({sql: roleSQL, rowsAsArray:true});
+    const roleArr = simplifyArray(rows);
+
+    return inquirer.prompt([
+        {
+            type:'list',
+            name: 'employee',
+            message: 'Which employee would you like to update?',
+            choices: nameArr,
+            filter: input => {
+                return (nameArr.indexOf(input)+1);
+            }
+        },
+        {
+            type:'list',
+            name: 'role',
+            message: 'What role would you like to give this employee?',
+            choices: roleArr,
+            filter: input => {
+                return (roleArr.indexOf(input)+1);
+            }
+        }
+    ])
+    .then (async updateInfo => {
+        const sql = `update employee set role_id = ?
+                        where id = ?`;
+        const params = [updateInfo.role, updateInfo.employee]
+        await promiseDB.query(sql, params);
+        console.log(`Employee role has been updated!`);
+        return businessInfo();
+    })
+
+
+    
+}
+
+async function updateManager() {
+    const empSQL = `select CONCAT(first_name, " ", last_name) as name from employee`;
+    const [eRows, nfields] = await promiseDB.query({sql:empSQL, rowsAsArray:true});
+    const empArr = simplifyArray(eRows);
+
+    return inquirer.prompt([
+        {
+            type:'list',
+            name: 'employee',
+            message: 'Which employee would you like to update?',
+            choices: empArr,
+            filter: input => {
+                return (empArr.indexOf(input)+1);
+            }
+        }
+    ])
+    .then ( async emp => {
+        const mgrSQL = `select CONCAT(first_name, " ", last_name) as name from employee WHERE employee.id <> ?`;
+        const params = [emp.employee];
+        const [mRows, nfields] = await promiseDB.query({sql:mgrSQL, rowsAsArray:true}, params);
+        const mgArr = simplifyArray(mRows);
+        const manager = await inquirer.prompt([ // gives manager full name
+            {
+                type:'list',
+                name: 'employee',
+                message: 'Which employee would you like to update?',
+                choices: mgArr,
+            },
+        ])
+        getIdSQL = `select id from employee 
+        where concat(first_name, " ", last_name) = ?;`
+        const mgrID = await promiseDB.query({sql:getIdSQL, rowsAsArray:true}, manager.employee);
+        return [mgrID[0], emp.employee];
+    })
+    .then (async updateInfo => {
+        const sql = `update employee set manager_id = ?
+                        where id = ?`;
+        await promiseDB.query(sql, updateInfo);
+        console.log(`Employee role has been updated!`);
+        return businessInfo();
+    })
+
+
+    
 }
 
 // Turn array of arrays into an array
