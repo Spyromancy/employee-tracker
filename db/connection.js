@@ -1,7 +1,5 @@
-const mysql = require('mysql2/promise');
-const bluebird = require('bluebird')
-
-const db = mysql.createConnection(
+const mysql = require('mysql2');
+const db = mysql.createPool(
     {
         host: 'localhost',
         // Your MySQL username,
@@ -9,8 +7,9 @@ const db = mysql.createConnection(
         // Your MySQL password
         password: 'M4r4th15BAE',
         database: 'employee_db',
-        Promise: bluebird
     },
 );
+
+db.query(`source db/schema.sql`)
 
 module.exports = db;

@@ -1,5 +1,6 @@
 const mysql = require('mysql2');
 const inquirer = require('inquirer');
+const table = require('console.table')
 const db = mysql.createPool(
     {
         host: 'localhost',
@@ -60,14 +61,25 @@ async function viewDepartment() {
 }
 // view roles {show table}
 async function viewRoles() {
-    const sql = 'select * from role';
+    const sql = `select role.id, role.title, role.salary,
+    department.name as department
+    from role
+    join department on role.department_id = department.id
+    order by role.id`;
     const [rows, fields] = await promiseDB.query(sql)
     console.table(rows);
     return businessInfo();
 }
 // view employees {show table}
 async function viewEmployees() {
-    const sql = 'select * from employee';
+    const sql = `select e.id, e.first_name, e.last_name,
+    role.title, role.salary, 
+    department.name as department, CONCAT(m.first_name, " ", m.last_name) AS manager
+    from employee e
+    join role on e.role_id = role.id
+    join department on role.department_id = department.id
+    left join employee m on e.manager_id = m.id
+    order by e.id`;
     const [rows, fields] = await promiseDB.query(sql)
     console.table(rows);
     return businessInfo();
@@ -217,7 +229,11 @@ async function addEmployee() {
     }); 
 }
 // update employee role {INSERT INTO departments}
-
+async function updateEmployee() {
+    const nameSQL = `select `
+    const roleSQL = ``
+    const updateSQL = `` 
+}
 
 // Turn array of arrays into an array
 function simplifyArray(arr, ...args){
