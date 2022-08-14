@@ -271,7 +271,7 @@ async function addEmployee() {
         return businessInfo();
     }); 
 }
-// update employee role {INSERT INTO departments}
+// update employee role 
 async function updateEmployee() {
     const nameSQL = `select CONCAT(first_name, " ", last_name) as name from employee`
     const [nrows, nfields] = await promiseDB.query({sql:nameSQL, rowsAsArray:true});
@@ -314,13 +314,14 @@ async function updateEmployee() {
     
 }
 
+// update employee's manager 
 async function updateManager() {
     const empSQL = `select CONCAT(first_name, " ", last_name) as name from employee`;
     const [eRows, nfields] = await promiseDB.query({sql:empSQL, rowsAsArray:true});
     const empArr = simplifyArray(eRows);
 
     return inquirer.prompt([
-        {
+        { // grab the employee to change
             type:'list',
             name: 'employee',
             message: 'Which employee would you like to update?',
@@ -331,9 +332,11 @@ async function updateManager() {
         }
     ])
     .then ( async emp => {
+        // remove the employee from the list of managers
+        // you can't be your own boss, this is not an MLM Scheme
         const mgrSQL = `select CONCAT(first_name, " ", last_name) as name from employee WHERE employee.id <> ?`;
         const params = [emp.employee];
-        const [mRows, nfields] = await promiseDB.query({sql:mgrSQL, rowsAsArray:true}, params);
+        const [mRows, nfields] = await promiseDB.query({sql:mgrSQL, rowsAsArray:true}, params); 
         const mgArr = simplifyArray(mRows);
         const manager = await inquirer.prompt([ // gives manager full name
             {
@@ -344,9 +347,9 @@ async function updateManager() {
             },
         ])
         getIdSQL = `select id from employee 
-        where concat(first_name, " ", last_name) = ?;`
+        where concat(first_name, " ", last_name) = ?;` // grabs the id that matches the manager's name
         const mgrID = await promiseDB.query({sql:getIdSQL, rowsAsArray:true}, manager.employee);
-        return [mgrID[0], emp.employee];
+        return [mgrID[0], emp.employee]; // return in a format that can be fed directly into the query call
     })
     .then (async updateInfo => {
         const sql = `update employee set manager_id = ?
