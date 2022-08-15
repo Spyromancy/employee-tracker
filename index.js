@@ -1,19 +1,17 @@
 const mysql = require('mysql2');
 const inquirer = require('inquirer');
+require('dotenv').config();
 require('console.table');
 const db = mysql.createPool(
     {
         host: 'localhost',
-        // Your MySQL username,
-        user: 'root',
-        // Your MySQL password
-        password: 'M4r4th15BAE',
-        database: 'employee_db',
+        user: process.env.DB_USER,
+        password: process.env.DB_PASSWORD,
+        database: process.env.DB_NAME,
     },
 );
 
 const promiseDB = db.promise();
-
 async function businessInfo() {
     return inquirer.prompt([
         // Select method
