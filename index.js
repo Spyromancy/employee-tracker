@@ -12,7 +12,7 @@ const db = mysql.createPool(
 );
 
 const promiseDB = db.promise();
-async function businessInfo() {
+function businessInfo() {
     return inquirer.prompt([
         // Select method
         {
