@@ -18,7 +18,7 @@ The application can be installed by downloading and running `npm i` in the local
 
 ## Usage
 
-[ WALKTHROUGH VIDEO GOES HERE ]
+https://drive.google.com/file/d/1sUl0dqz3jKZjB_dNdP8KemEaIZXnri_l/view
 
 this program can be run in the command line to access and modify the company database.
 
